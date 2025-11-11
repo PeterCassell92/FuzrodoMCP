@@ -1,0 +1,35 @@
+{
+  "name": "fuzrodo",
+  "version": "1.0.0",
+  "description": "FuzroDo - General-purpose workflow orchestration MCP server that coordinates complex multi-step processes across multiple MCP tools",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc && node dist/index.js",
+    "start": "node dist/index.js",
+    "watch": "tsc --watch"
+  },
+  "keywords": [
+    "mcp",
+    "workflow",
+    "orchestration",
+    "automation",
+    "langgraph",
+    "state-machine"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@langchain/langgraph": "^0.2.19",
+    "@langchain/core": "^0.3.28",
+    "dotenv": "^16.4.5",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.9",
+    "@types/uuid": "^10.0.0",
+    "typescript": "^5.7.2"
+  }
+}

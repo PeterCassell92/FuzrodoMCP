@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "fuzrodo": {
+      "command": "node",
+      "args": [
+        "c:/Users/peter/Documents/FusRohDoMCP/dist/index.js"
+      ],
+      "env": {
+        "LOG_LEVEL": "info"
+      }
+    }
+  }
+}
