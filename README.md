@@ -71,9 +71,11 @@ Add FuzroDo to your Claude Desktop configuration file.
 {
   "mcpServers": {
     "fuzrodo": {
-      "command": "node",
+      "command": "npx",
       "args": [
-        "c:/Users/peter/Documents/FusRohDoMCP/dist/index.js"
+        "-y",
+        "tsx",
+        "c:/Users/peter/Documents/FusRohDoMCP/src/index.ts"
       ],
       "env": {
         "LOG_LEVEL": "info"

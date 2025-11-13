@@ -2,8 +2,6 @@
  * Core workflow type definitions
  */
 
-import type { CompiledStateGraph } from '@langchain/langgraph';
-
 /**
  * JSON Schema type for tool inputs/outputs
  */
@@ -28,10 +26,11 @@ export interface WorkflowRequirements {
 
 /**
  * Complete workflow definition
- * TState: The workflow state type
- * TUpdate: The partial state update type (defaults to Partial<TState>)
+ * Note: We use `any` for CompiledStateGraph because LangGraph v1.0+'s
+ * complex generic types don't play well with strict typing here.
+ * Each workflow can still type its own state internally.
  */
-export interface WorkflowDefinition<TState = any, TUpdate = Partial<TState>> {
+export interface WorkflowDefinition {
   id: string;
   name: string;
   description: string;
@@ -39,7 +38,7 @@ export interface WorkflowDefinition<TState = any, TUpdate = Partial<TState>> {
   requirements: WorkflowRequirements;
   inputSchema: JSONSchema;
   outputSchema?: JSONSchema;
-  createGraph: () => CompiledStateGraph<TState, TUpdate>;
+  createGraph: () => any; // Returns CompiledStateGraph but with flexible typing
 }
 
 /**

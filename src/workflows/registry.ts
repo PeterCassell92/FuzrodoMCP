@@ -102,3 +102,10 @@ export class WorkflowRegistry {
 
 // Export singleton instance
 export const workflowRegistry = new WorkflowRegistry();
+
+// Register workflows
+import { createJiraTicketWorkflow } from './createJiraTicket/workflow';
+import { audioQuoteAppendWorkflow } from './audioQuoteAppend/workflow';
+
+workflowRegistry.register(createJiraTicketWorkflow);
+workflowRegistry.register(audioQuoteAppendWorkflow);

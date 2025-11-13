@@ -5,6 +5,10 @@
  * General-purpose workflow orchestration server
  */
 
+// IMPORTANT: This MUST be the first import to load environment variables
+// before any other modules access them
+import './config.js';
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -18,7 +22,6 @@ import { mcpClientManager } from './utils/mcpClient.js';
 import { validateWorkflowRequirements, formatValidationResult } from './utils/requirements.js';
 import { logger } from './utils/logger.js';
 import { RequirementError } from './utils/errors.js';
-import { workflowStateManager } from './utils/workflowState.js';
 
 const server = new Server(
   {
@@ -56,28 +59,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         required: ['name'],
       },
     },
-    {
-      name: 'resume_workflow',
-      description: 'Resume a paused workflow with results from an LLM task. Use this after completing the requested action from a partial workflow response.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          resumeToken: {
-            type: 'string',
-            description: 'Resume token from the partial workflow response',
-          },
-          results: {
-            type: 'object',
-            description: 'Results from executing the requested LLM action. Keys should match the requiredOutputs from the action.',
-          },
-        },
-        required: ['resumeToken', 'results'],
-      },
-    },
     ...workflowTools,
   ];
 
-  logger.debug(`Listing ${tools.length} tools (${workflowTools.length} workflows + 2 system tools)`);
+  logger.debug(`Listing ${tools.length} tools (${workflowTools.length} workflows + 1 system tool)`);
   return { tools };
 });
 
@@ -124,74 +109,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       };
     }
 
-    // Handle resume_workflow tool
-    if (name === 'resume_workflow') {
-      const { resumeToken, results } = args as { resumeToken: string; results: Record<string, any> };
-      logger.info('resume_workflow tool called', { resumeToken });
-
-      // Load saved workflow state
-      const savedState = workflowStateManager.load(resumeToken);
-      if (!savedState) {
-        throw new McpError(
-          ErrorCode.InvalidRequest,
-          `Invalid or expired resume token: ${resumeToken}`
-        );
-      }
-
-      // Get the workflow
-      const workflowId = workflowStateManager.getWorkflowId(resumeToken);
-      if (!workflowId) {
-        throw new McpError(
-          ErrorCode.InvalidRequest,
-          'Could not determine workflow from resume token'
-        );
-      }
-
-      const workflow = workflowRegistry.get(workflowId);
-      if (!workflow) {
-        throw new McpError(
-          ErrorCode.MethodNotFound,
-          `Workflow not found: ${workflowId}`
-        );
-      }
-
-      logger.debug('Resuming workflow', {
-        workflowId,
-        results: Object.keys(results),
-      });
-
-      // Merge results into saved state
-      const resumedState = {
-        ...savedState,
-        ...results,
-        resuming: true,
-      };
-
-      // Create and execute the workflow graph
-      const graph = workflow.createGraph();
-      const result = await graph.invoke(resumedState);
-
-      // Delete the saved state (workflow completed or will create new token)
-      workflowStateManager.delete(resumeToken);
-
-      logger.info('Workflow resumed', {
-        workflowId,
-        success: result.status === 'completed' && result.success,
-      });
-
-      // Format result for MCP response
-      const responseText = formatWorkflowResult(workflow, result);
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: responseText,
-          },
-        ],
-      };
-    }
-
     // Check if this is a registered workflow
     const workflow = workflowRegistry.get(name);
     if (!workflow) {
@@ -229,12 +146,28 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     logger.debug('Creating workflow graph');
     const graph = workflow.createGraph();
 
+    // Initialize workflow state with required arrays
+    const initialState = {
+      ...args,
+      currentStep: 'start',
+      completedSteps: [],
+      errors: []
+    };
+
     logger.debug('Invoking workflow', { args });
-    const result = await graph.invoke(args as any);
+    const result = await graph.invoke(initialState as any);
 
     logger.info('Workflow completed', {
       workflow: workflow.id,
-      success: !result.error
+      success: !result.error,
+      status: result.status,
+      hasResumeToken: !!result.resumeToken
+    });
+
+    // Debug log the actual result structure
+    logger.debug('Workflow result structure', {
+      resultKeys: Object.keys(result),
+      result: JSON.stringify(result, null, 2)
     });
 
     // Format result for MCP response
@@ -295,9 +228,12 @@ function formatWorkflowResult(workflow: any, result: any): string {
 
     lines.push(`📋 Required Action: ${result.action.description}`);
     lines.push('');
-    lines.push('Instructions:');
-    lines.push(result.action.prompt);
-    lines.push('');
+
+    if (result.action.prompt) {
+      lines.push('Instructions:');
+      lines.push(result.action.prompt);
+      lines.push('');
+    }
 
     if (result.action.availableTools && result.action.availableTools.length > 0) {
       lines.push(`Available Tools: ${result.action.availableTools.join(', ')}`);
@@ -349,20 +285,24 @@ function formatWorkflowResult(workflow: any, result: any): string {
     }
 
     // Include relevant data from result
-    if (result.data) {
+    const resultKeys = Object.keys(result).filter(key =>
+      !['currentStep', 'completedSteps', 'errors', 'error'].includes(key) && result[key] !== undefined
+    );
+
+    if (resultKeys.length > 0) {
       lines.push('Results:');
-      if (result.data.ticketKey) {
-        lines.push(`  Ticket: ${result.data.ticketKey}`);
-      }
-      if (result.data.ticketUrl) {
-        lines.push(`  URL: ${result.data.ticketUrl}`);
-      }
-      if (result.data.audioId) {
-        lines.push(`  Audio ID: ${result.data.audioId}`);
-      }
-      if (result.data.attachmentUrl) {
-        lines.push(`  Attachment: ${result.data.attachmentUrl}`);
-      }
+
+      // Show all non-workflow keys for debugging
+      resultKeys.forEach(key => {
+        const value = result[key];
+        if (typeof value === 'string') {
+          lines.push(`  ${key}: ${value.length > 100 ? value.substring(0, 100) + '...' : value}`);
+        } else if (Array.isArray(value)) {
+          lines.push(`  ${key}: [${value.length} items]`);
+        } else {
+          lines.push(`  ${key}: ${JSON.stringify(value)}`);
+        }
+      });
     }
   }
 

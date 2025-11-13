@@ -29,6 +29,11 @@ export class MCPClientManager {
   private loadConfigFromEnv(): void {
     const serverNames = new Set<string>();
 
+    logger.debug('Loading MCP configurations from environment');
+    logger.debug('Environment variables:', {
+      envKeys: Object.keys(process.env).filter(k => k.includes('MCP')),
+    });
+
     // Find all MCP server configurations in environment
     for (const key of Object.keys(process.env)) {
       const match = key.match(/^(.+)_MCP_TRANSPORT$/);
@@ -63,6 +68,7 @@ export class MCPClientManager {
     }
 
     logger.info(`Loaded ${this.config.size} MCP server configurations`);
+    logger.debug('Configured servers:', { servers: Array.from(this.config.keys()) });
   }
 
   /**
@@ -86,6 +92,11 @@ export class MCPClientManager {
 
     try {
       logger.info(`Connecting to MCP server: ${serverName}`);
+      logger.debug(`MCP server config:`, {
+        command: config.command,
+        args: config.args,
+        cwd: process.cwd(),
+      });
 
       // Create client and transport
       const client = new Client(
