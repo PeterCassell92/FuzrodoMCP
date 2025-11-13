@@ -271,20 +271,12 @@ export const jiraAudioQuoteWorkflowConfig: WorkflowRequirements = {
     },
     {
       name: 'elevenlabs',
-      tools: ['enhance_quote_for_impact', 'create_wise_quote_audio', 'download_audio'],
-      optional: false
-    },
-    {
-      name: 'playwright',
-      tools: ['browser_navigate', 'browser_click', 'browser_type', 'browser_snapshot'],
+      tools: ['create_wise_quote_audio', 'download_audio'],
       optional: false
     }
-  ],
-  environment: [
-    'ELEVEN_LABS_API_KEY',
-    'ATLASSIAN_USERNAME',
-    'ATLASSIAN_API_KEY',
-    'JIRA_URL'
+    // NOTE: Playwright is NOT required here!
+    // FuzroDo generates instructions that Claude executes via Playwright.
+    // Claude (not FuzroDo) calls Playwright based on those instructions.
   ]
 };
 ```

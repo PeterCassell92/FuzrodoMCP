@@ -135,6 +135,8 @@ Configuration is read from `.env` file with pattern:
 - `{SERVERNAME}_MCP_COMMAND`
 - `{SERVERNAME}_MCP_ARGS` (JSON array)
 
+**Important**: Only configure MCPs that FuzroDo directly calls (ElevenLabs, Atlassian-Prompts). MCPs that Claude uses based on workflow instructions (Playwright) should NOT be configured in FuzroDo's `.env`.
+
 ## Error Handling
 
 Custom error types in `src/utils/errors.ts`:

@@ -3,8 +3,8 @@
  * Manages registration and discovery of workflows
  */
 
-import { WorkflowDefinition } from '../types/workflow.js';
-import { logger } from '../utils/logger.js';
+import { WorkflowDefinition } from '../types/workflow';
+import { logger } from '../utils/logger';
 
 export class WorkflowRegistry {
   private workflows: Map<string, WorkflowDefinition> = new Map();

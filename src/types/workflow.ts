@@ -43,11 +43,36 @@ export interface WorkflowDefinition<TState = any, TUpdate = Partial<TState>> {
 }
 
 /**
- * Result of workflow execution
+ * Action requested from LLM/Claude Code
  */
-export interface WorkflowResult<T = any> {
+export interface LLMAction {
+  type: 'browser_automation' | 'text_processing' | 'decision' | 'custom';
+  description: string;
+  prompt: string;
+  requiredOutputs: string[];
+  availableTools?: string[]; // MCP tool names to use
+  context?: Record<string, any>; // Additional context for the action
+}
+
+/**
+ * Partial workflow response (awaiting LLM action)
+ */
+export interface PartialWorkflowResult {
+  status: 'awaiting_llm_action';
+  workflowId: string;
+  resumeToken: string;
+  completedSteps: string[];
+  action: LLMAction;
+  message: string; // Human-readable description
+}
+
+/**
+ * Completed workflow response
+ */
+export interface CompletedWorkflowResult<T = any> {
+  status: 'completed';
   success: boolean;
-  partialSuccess?: boolean;
+  workflowId: string;
   completedSteps: string[];
   failedStep?: string;
   data?: T;
@@ -57,6 +82,13 @@ export interface WorkflowResult<T = any> {
     error: string;
   }>;
 }
+
+/**
+ * Result of workflow execution (union type)
+ */
+export type WorkflowResult<T = any> =
+  | PartialWorkflowResult
+  | CompletedWorkflowResult<T>;
 
 /**
  * Base interface for workflow state

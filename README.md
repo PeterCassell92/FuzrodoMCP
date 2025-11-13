@@ -28,7 +28,7 @@ npm run build
 
 ### 1. Configure FuzroDo
 
-Copy `.env.example` to `.env` and configure the MCP servers that FuzroDo will orchestrate:
+Copy `.env.example` to `.env` and configure the MCP servers that **FuzroDo directly orchestrates**:
 
 ```bash
 cp .env.example .env
@@ -37,26 +37,24 @@ cp .env.example .env
 Edit `.env` to point to your MCP servers:
 
 ```env
-# ElevenLabs MCP Server
+# ElevenLabs MCP Server - FuzroDo calls this directly
 ELEVENLABS_MCP_TRANSPORT=stdio
 ELEVENLABS_MCP_COMMAND=node
 ELEVENLABS_MCP_ARGS=["c:/Users/peter/Documents/ElevenLabsMCP/dist/index.js"]
 
-# Atlassian Prompts MCP Server
+# Atlassian Prompts MCP Server - FuzroDo calls this directly
 ATLASSIAN_MCP_TRANSPORT=stdio
 ATLASSIAN_MCP_COMMAND=node
 ATLASSIAN_MCP_ARGS=["c:/Users/peter/Documents/BitbucketPromptsForPlaywrightMCP/mcp-server/index.js"]
-
-# Playwright MCP Server
-PLAYWRIGHT_MCP_TRANSPORT=stdio
-PLAYWRIGHT_MCP_COMMAND=npx
-PLAYWRIGHT_MCP_ARGS=["-y", "@modelcontextprotocol/server-playwright"]
 
 # Logging level
 LOG_LEVEL=info
 ```
 
-**Important**: Each MCP server manages its own secrets in its own `.env` file. FuzroDo only needs to know how to spawn them.
+**Important Notes**:
+- Only configure MCPs that FuzroDo directly calls (ElevenLabs, Atlassian-Prompts)
+- Do NOT configure MCPs that Claude uses based on FuzroDo's instructions (like Playwright)
+- Each MCP server manages its own secrets in its own `.env` file
 
 ### 2. Configure Claude Code/Desktop
 
@@ -85,9 +83,9 @@ Add FuzroDo to your Claude Desktop configuration file.
 }
 ```
 
-**Full Configuration** (FuzroDo + other MCP servers):
+**Full Configuration** (FuzroDo + MCPs for Claude):
 
-If you want Claude to access both FuzroDo workflows AND the individual MCP servers directly:
+Claude needs access to FuzroDo AND the MCPs that workflows delegate to (like Playwright):
 
 ```json
 {
@@ -101,6 +99,13 @@ If you want Claude to access both FuzroDo workflows AND the individual MCP serve
         "LOG_LEVEL": "info"
       }
     },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-playwright"
+      ]
+    },
     "elevenlabs": {
       "command": "node",
       "args": [
@@ -112,17 +117,15 @@ If you want Claude to access both FuzroDo workflows AND the individual MCP serve
       "args": [
         "c:/Users/peter/Documents/BitbucketPromptsForPlaywrightMCP/mcp-server/index.js"
       ]
-    },
-    "playwright": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-playwright"
-      ]
     }
   }
 }
 ```
+
+**Key Point**:
+- **FuzroDo** directly calls ElevenLabs and Atlassian-Prompts (configured in FuzroDo's `.env`)
+- **Claude** uses Playwright when FuzroDo workflows delegate tasks (configured in Claude Desktop config)
+- This separation keeps FuzroDo focused on orchestration, not LLM reasoning
 
 **Note**: Update paths to match your system.
 

@@ -2,10 +2,10 @@
  * Workflow requirement validation utilities
  */
 
-import { WorkflowDefinition } from '../types/workflow.js';
-import { MCPClientManager } from './mcpClient.js';
-import { MCPValidationResult } from '../types/mcpConnections.js';
-import { logger } from './logger.js';
+import { WorkflowDefinition } from '../types/workflow';
+import { MCPClientManager } from './mcpClient';
+import { MCPValidationResult } from '../types/mcpConnections';
+import { logger } from './logger';
 
 /**
  * Validate all requirements for a workflow

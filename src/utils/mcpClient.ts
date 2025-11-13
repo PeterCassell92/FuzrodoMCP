@@ -10,9 +10,9 @@ import {
   MCPServerConfig,
   MCPConnection,
   MCPValidationResult
-} from '../types/mcpConnections.js';
-import { MCPClientError } from './errors.js';
-import { logger } from './logger.js';
+} from '../types/mcpConnections';
+import { MCPClientError } from './errors';
+import { logger } from './logger';
 
 export class MCPClientManager {
   private connections: Map<string, MCPConnection> = new Map();
@@ -280,10 +280,23 @@ export class MCPClientManager {
   }
 
   /**
-   * Get list of configured servers
+   * Get list of configured servers (from .env, not necessarily connected)
    */
   getConfiguredServers(): string[] {
     return Array.from(this.config.keys());
+  }
+
+  /**
+   * Get list of connected servers (actually connected and verified)
+   */
+  getConnectedServers(): string[] {
+    const connected: string[] = [];
+    for (const [name, connection] of this.connections.entries()) {
+      if (connection.connected) {
+        connected.push(name);
+      }
+    }
+    return connected;
   }
 
   /**
@@ -291,6 +304,48 @@ export class MCPClientManager {
    */
   hasServer(serverName: string): boolean {
     return this.config.has(serverName);
+  }
+
+  /**
+   * Check if a server is connected
+   */
+  isConnected(serverName: string): boolean {
+    const connection = this.connections.get(serverName);
+    return connection?.connected ?? false;
+  }
+
+  /**
+   * Get health status of all configured servers
+   */
+  async getHealthStatus(): Promise<Array<{
+    name: string;
+    configured: boolean;
+    connected: boolean;
+    toolCount?: number;
+    error?: string;
+  }>> {
+    const status = [];
+
+    for (const serverName of this.getConfiguredServers()) {
+      try {
+        const tools = await this.listTools(serverName);
+        status.push({
+          name: serverName,
+          configured: true,
+          connected: true,
+          toolCount: tools.length,
+        });
+      } catch (error) {
+        status.push({
+          name: serverName,
+          configured: true,
+          connected: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    return status;
   }
 }
 
